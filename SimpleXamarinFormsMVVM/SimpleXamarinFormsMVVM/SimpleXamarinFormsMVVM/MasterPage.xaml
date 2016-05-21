@@ -1,0 +1,12 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://xamarin.com/schemas/2014/forms"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="SimpleXamarinFormsMVVM.MasterPage" Title="Hello world">
+  <StackLayout Orientation="Vertical">
+    <Button Text="Back" Command="{Binding GoBackCommand}"/>
+    <Button Text="First" Command="{Binding SelectPageCommand}" CommandParameter="1"/>
+    <Button Text="First" Command="{Binding SelectPageCommand}" CommandParameter="2"/>
+    <Button Text="First" Command="{Binding SelectPageCommand}" CommandParameter="3"/>
+    <Button Text="First" Command="{Binding SelectPageCommand}" CommandParameter="4"/>
+  </StackLayout>
+</ContentPage>
