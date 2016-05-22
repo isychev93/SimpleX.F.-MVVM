@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Collections.Specialized;
 using System.Linq;
 using System.Threading.Tasks;
 using SimpleXamarinFormsMVVM.Core.Extentions;
@@ -22,6 +23,7 @@ namespace SimpleXamarinFormsMVVM.Core.View.Services
 
             Stack = new ReadOnlyObservableCollection<Page>(stack);
             stack.Add(new NavigationPage());
+            stack.CollectionChanged += Stack_CollectionChanged;
         }
 
         public ReadOnlyObservableCollection<Page> Stack { get; }
@@ -36,6 +38,8 @@ namespace SimpleXamarinFormsMVVM.Core.View.Services
             var viewModelWithView = pageLoaderService.GetView(viewModelAdditionalAction);
             var model = viewModelWithView.Key;
             var view = viewModelWithView.Value;
+            view.SetValue(NavigationPage.HasNavigationBarProperty, model.HasNavigationBar);
+
             var lastNavPage = GetLastNavigationPage();
             if (lastNavPage == null)
                 throw new InvalidOperationException("Can't show page if no one NavigationPage exists.");
@@ -61,9 +65,12 @@ namespace SimpleXamarinFormsMVVM.Core.View.Services
         {
             var masterViewModelWithView = pageLoaderService.GetView(masterViewModelAdditionalAction);
             var masterViewModel = masterViewModelWithView.Key;
+            masterViewModelWithView.Value.SetValue(NavigationPage.HasNavigationBarProperty, masterViewModel.HasNavigationBar);
+
             var detailViewModelWithView = pageLoaderService.GetView(detailViewModelAdditionalAction);
             var detailViewModel = detailViewModelWithView.Key;
             var detailView = detailViewModelWithView.Value;
+            detailView.SetValue(NavigationPage.HasNavigationBarProperty, detailViewModel.HasNavigationBar);
             masterViewModel.DetailViewModel = detailViewModel;
 
             var pagesToAdd = new List<Page>();
@@ -189,6 +196,10 @@ namespace SimpleXamarinFormsMVVM.Core.View.Services
             return GoBack(Task.WhenAll(tasksToWait), true);
         }
 
+        public void Execute(IViewModel viewModel, Action<Page> action)
+        {
+            action(stack.Single(p => p.BindingContext == viewModel));
+        }
 
         private NavigationPage GetLastNavigationPage()
         {
@@ -198,6 +209,58 @@ namespace SimpleXamarinFormsMVVM.Core.View.Services
         private Page BeforePage(Page page)
         {
             return stack[stack.IndexOf(page) - 1];
+        }
+
+        private void Stack_CollectionChanged(object sender, NotifyCollectionChangedEventArgs notifyCollectionChangedEventArgs)
+        {
+            switch (notifyCollectionChangedEventArgs.Action)
+            {
+                case NotifyCollectionChangedAction.Add:
+                    {
+                        foreach (var newPage in notifyCollectionChangedEventArgs.NewItems.OfType<Page>())
+                            SubscribeToPageIfNeeded(newPage);
+                    }
+                    break;
+
+                case NotifyCollectionChangedAction.Remove:
+                    {
+                        foreach (var oldPage in notifyCollectionChangedEventArgs.OldItems.OfType<Page>())
+                            UnSubscribeFromPageIfNeeded(oldPage);
+                    }
+                    break;
+            }
+        }
+
+        private void SubscribeToPageIfNeeded(Page newPage)
+        {
+            var viewModel = newPage.BindingContext as IViewModel;
+            if (viewModel != null)
+            {
+                newPage.Appearing += Page_Appearing;
+                newPage.Disappearing += Page_Disappearing;
+            }
+        }
+
+        private void UnSubscribeFromPageIfNeeded(Page newPage)
+        {
+            var viewModel = newPage.BindingContext as IViewModel;
+            if (viewModel != null)
+            {
+                newPage.Appearing -= Page_Appearing;
+                newPage.Disappearing -= Page_Disappearing;
+            }
+        }
+
+        private void Page_Appearing(object sender, EventArgs eventArgs)
+        {
+            var viewModel = ((IViewModel)((Page)sender).BindingContext);
+            viewModel.OnAppearing();
+        }
+
+        private void Page_Disappearing(object sender, EventArgs eventArgs)
+        {
+            var viewModel = ((IViewModel)((Page)sender).BindingContext);
+            viewModel.OnDisappearing();
         }
     }
 }

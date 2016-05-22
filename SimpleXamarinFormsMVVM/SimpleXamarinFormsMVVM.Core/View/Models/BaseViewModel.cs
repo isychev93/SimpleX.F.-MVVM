@@ -26,6 +26,23 @@ namespace SimpleXamarinFormsMVVM.Core.View.Models
             get { return false; }
         }
 
+        public virtual bool HasNavigationBar
+        {
+            get { return true; }
+        }
+
+        public virtual void OnAppearing()
+        {
+
+        }
+
+        public virtual void OnDisappearing()
+        {
+
+        }
+
+        public virtual ICommand GoBackCommand { get; }
+
         public void RaisePropertyChanged([CallerMemberName] string propertyName = "")
         {
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
@@ -40,7 +57,5 @@ namespace SimpleXamarinFormsMVVM.Core.View.Models
         {
             return expression.GetPropertyName();
         }
-
-        public virtual ICommand GoBackCommand { get; }
     }
 }

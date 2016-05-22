@@ -60,5 +60,12 @@ namespace SimpleXamarinFormsMVVM.Core.View.Services
         void PresentDetailView();
 
         Task GoBack();
+
+        /// <summary>
+        /// Execute action for page which mapped with <see cref="viewModel"/>.
+        /// </summary>
+        /// <param name="viewModel"></param>
+        /// <param name="action"></param>
+        void Execute(IViewModel viewModel, Action<Page> action);
     }
 }
