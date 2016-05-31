@@ -53,5 +53,14 @@ namespace SimpleXamarinFormsMVVM.Core.View.Services
             viewModelAdditionalAction?.Invoke(viewModel);
             return viewModel;
         }
+
+        public MasterDetailPage GetDefaultMasterPage<TMasterViewModel>() where TMasterViewModel : IMasterViewModel
+        {
+            return new MasterDetailPage
+            {
+                MasterBehavior = MasterBehavior.Popover,
+                Title =  string.Empty
+            };
+        }
     }
 }

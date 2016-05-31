@@ -1,10 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
-using System.Collections.Specialized;
 using System.Linq;
+using System.Reflection;
 using System.Threading.Tasks;
-using SimpleXamarinFormsMVVM.Core.Extentions;
 using SimpleXamarinFormsMVVM.Core.View.Models;
 using Xamarin.Forms;
 
@@ -14,19 +12,24 @@ namespace SimpleXamarinFormsMVVM.Core.View.Services
     {
         private readonly IPageLoaderService pageLoaderService;
         private readonly ITraceService traceService;
-        private readonly ObservableCollection<Page> stack = new ObservableCollection<Page>();
+        private readonly Dictionary<IViewModel, Page> stack = new Dictionary<IViewModel, Page>();
+        private readonly NavigationPage root = new NavigationPage();
 
         public NavigationService(IPageLoaderService pageLoaderService, ITraceService traceService)
         {
             this.pageLoaderService = pageLoaderService;
             this.traceService = traceService;
-
-            Stack = new ReadOnlyObservableCollection<Page>(stack);
-            stack.Add(new NavigationPage());
-            stack.CollectionChanged += Stack_CollectionChanged;
         }
 
-        public ReadOnlyObservableCollection<Page> Stack { get; }
+        public Dictionary<IViewModel, Page> Stack
+        {
+            get { return stack; }
+        }
+
+        public NavigationPage Root
+        {
+            get { return root; }
+        }
 
         public Task ShowView<TViewModel>() where TViewModel : IViewModel
         {
@@ -35,27 +38,30 @@ namespace SimpleXamarinFormsMVVM.Core.View.Services
 
         public Task ShowView<TViewModel>(Action<TViewModel> viewModelAdditionalAction) where TViewModel : IViewModel
         {
+            if (typeof(TViewModel).GetTypeInfo().IsAssignableFrom(typeof(IDetailViewModel).GetTypeInfo()))
+            {
+                traceService.Trace("Can't show view {0}. View which implement IDetailViewModel must be present as detail of master view.", typeof(TViewModel));
+                return null;
+            }
+
             var viewModelWithView = pageLoaderService.GetView(viewModelAdditionalAction);
             var model = viewModelWithView.Key;
             var view = viewModelWithView.Value;
+            PushViewInStack(model, view);
+
             view.SetValue(NavigationPage.HasNavigationBarProperty, model.HasNavigationBar);
 
-            var lastNavPage = GetLastNavigationPage();
-            if (lastNavPage == null)
-                throw new InvalidOperationException("Can't show page if no one NavigationPage exists.");
+            var currentNavigation = GetCurrentNavigation();
 
             if (!model.ShowInNewNavigationPage)
             {
-                var addNewViewTask = lastNavPage.PushAsync(view);
-                stack.Add(view);
+                var addNewViewTask = currentNavigation.PushAsync(view);
                 return addNewViewTask;
             }
 
             var newNavPage = new NavigationPage();
-            var addNewNavPageTask = lastNavPage.PushAsync(newNavPage);
+            var addNewNavPageTask = currentNavigation.PushAsync(newNavPage);
             var addNewViewTaskIntoNewNavPage = newNavPage.PushAsync(view);
-            stack.Add(newNavPage);
-            stack.Add(view);
             return Task.WhenAll(addNewNavPageTask, addNewViewTaskIntoNewNavPage);
         }
 
@@ -65,6 +71,7 @@ namespace SimpleXamarinFormsMVVM.Core.View.Services
         {
             var masterViewModelWithView = pageLoaderService.GetView(masterViewModelAdditionalAction);
             var masterViewModel = masterViewModelWithView.Key;
+            var masterView = masterViewModelWithView.Value;
             masterViewModelWithView.Value.SetValue(NavigationPage.HasNavigationBarProperty, masterViewModel.HasNavigationBar);
 
             var detailViewModelWithView = pageLoaderService.GetView(detailViewModelAdditionalAction);
@@ -73,182 +80,151 @@ namespace SimpleXamarinFormsMVVM.Core.View.Services
             detailView.SetValue(NavigationPage.HasNavigationBarProperty, detailViewModel.HasNavigationBar);
             masterViewModel.DetailViewModel = detailViewModel;
 
-            var pagesToAdd = new List<Page>();
+            PushViewInStack(masterViewModel, masterView);
+            PushViewInStack(detailViewModel, detailView);
+
             var tasksToWait = new List<Task>();
-            var masterPage = new MasterDetailPage { Master = masterViewModelWithView.Value, Title = string.Empty };
+            var masterPage = pageLoaderService.GetDefaultMasterPage<TMasterViewModel>();
+            masterPage.Master = masterView;
+
             if (!detailViewModel.ShowInNewNavigationPage)
             {
                 masterPage.Detail = detailView;
-                pagesToAdd.Add(detailView);
             }
             else
             {
                 var newDetailNavPage = new NavigationPage();
                 tasksToWait.Add(newDetailNavPage.PushAsync(detailView));
-                pagesToAdd.Add(newDetailNavPage);
-                pagesToAdd.Add(detailView);
             }
 
-            var lastNavPage = GetLastNavigationPage();
+            var currentNavigation = GetCurrentNavigation();
             if (!masterViewModel.ShowInNewNavigationPage)
             {
-                tasksToWait.Add(lastNavPage.PushAsync(masterPage));
-                pagesToAdd.Insert(0, masterPage);
+                tasksToWait.Add(currentNavigation.PushAsync(masterPage));
             }
             else
             {
                 var newMasterNavPage = new NavigationPage();
                 tasksToWait.Add(newMasterNavPage.PushAsync(masterPage));
-                pagesToAdd.Insert(0, newMasterNavPage);
-                pagesToAdd.Insert(1, masterPage);
             }
 
-            stack.AddRange(pagesToAdd);
             return Task.WhenAll(tasksToWait);
         }
 
-        public Task ChangeDetailView<TViewModel>(Action<TViewModel> viewModelAdditionalAction = null) where TViewModel : IViewModel
+        public Task ChangeDetailView<TViewModel>(Action<TViewModel> viewModelAdditionalAction = null) where TViewModel : IDetailViewModel
         {
             var viewModelWithView = pageLoaderService.GetView(viewModelAdditionalAction);
             var model = viewModelWithView.Key;
             var view = viewModelWithView.Value;
-            var master = stack.OfType<MasterDetailPage>().Last();
-            if (master == null)
+
+            var masterInfo = GetCurrentMasterInfo();
+            if (masterInfo == null)
             {
-                traceService.Trace("Can't show detail page if no one master page exists.");
+                traceService.Trace("Can't show {0} as detail view, masterInfo is null", typeof(TViewModel));
                 return null;
             }
+            PopViewFromStack(masterInfo.DetailViewModelWithView.Key);
+            PushViewInStack(model, view);
 
             if (!model.ShowInNewNavigationPage)
             {
-                master.Detail = view;
-                stack.Add(view);
+                masterInfo.MasterDetailPage.Detail = view;
                 return null;
             }
 
             var newNavPage = new NavigationPage();
             var addNewViewTaskIntoNewNavPage = newNavPage.PushAsync(view);
-            master.Detail = newNavPage;
-            stack.Add(newNavPage);
-            stack.Add(view);
+            masterInfo.MasterDetailPage.Detail = newNavPage;
             return addNewViewTaskIntoNewNavPage;
         }
 
         public void PresentMasterView()
         {
-            stack.OfType<MasterDetailPage>().Last().IsPresented = true;
+            var masterInfo = GetCurrentMasterInfo();
+            if (masterInfo != null)
+                masterInfo.MasterDetailPage.IsPresented = true;
         }
 
         public void PresentDetailView()
         {
-            stack.OfType<MasterDetailPage>().Last().IsPresented = false;
+            var masterInfo = GetCurrentMasterInfo();
+            if (masterInfo != null)
+                masterInfo.MasterDetailPage.IsPresented = false;
+        }
+
+        public Task GoBack(IViewModel viewModelToDelete)
+        {
+            return stack[viewModelToDelete].Navigation.PopAsync();
         }
 
         public Task GoBack()
         {
-            return GoBack(null);
-        }
-
-        private Task GoBack(Task previousPopTask, bool continueOnlyIfCurrentPageIsNavigationPage = false)
-        {
-            if (stack.Count <= 2)
-            {
-                traceService.Trace("Can't go back, current page is root.");
-                return null;
-            }
-
-            var currentPage = stack.Last();
-
-            if (continueOnlyIfCurrentPageIsNavigationPage && !(currentPage is NavigationPage))
-                return previousPopTask;
-
-            var tasksToWait = new List<Task>();
-            if (previousPopTask != null)
-                tasksToWait.Add(previousPopTask);
-            var navigationPages = stack.OfType<NavigationPage>().ToList();
-            var beforeCurrentPage = BeforePage(currentPage);
-            // currentPage = currentNavPage
-            if (currentPage is NavigationPage)
-            {
-                var navPageOfCurrentNavPage = navigationPages[navigationPages.Count - 2];
-                // NavPage in MasterDetailPage.Detail
-                if (beforeCurrentPage is MasterDetailPage)
-                {
-                    stack.Remove(currentPage);
-                    // Remove MasterDetailPage from stack
-                    tasksToWait.Add(navPageOfCurrentNavPage.PopAsync());
-                    stack.Remove(beforeCurrentPage);
-                    return GoBack(Task.WhenAll(tasksToWait), true);
-                }
-
-                stack.Remove(currentPage);
-                tasksToWait.Add(navPageOfCurrentNavPage.PopAsync());
-                return GoBack(Task.WhenAll(tasksToWait), true);
-            }
-
-            var currentNavPage = navigationPages.Last();
-            stack.Remove(currentPage);
-            tasksToWait.Add(currentNavPage.PopAsync());
-            // We must delete MasterDetailPage too.
-            if (beforeCurrentPage is MasterDetailPage)
-                return GoBack(Task.WhenAll(tasksToWait));
-
-            return GoBack(Task.WhenAll(tasksToWait), true);
+            return stack.Last().Value.Navigation.PopAsync();
         }
 
         public void Execute(IViewModel viewModel, Action<Page> action)
         {
-            action(stack.Single(p => p.BindingContext == viewModel));
+            action(stack[viewModel]);
         }
 
-        private NavigationPage GetLastNavigationPage()
+        private INavigation GetCurrentNavigation()
         {
-            return stack.OfType<NavigationPage>().Last();
+            return Stack.Any() ? Stack.Last().Value.Navigation : root.Navigation;
         }
 
-        private Page BeforePage(Page page)
+        private MasterDetailPageInfo GetCurrentMasterInfo()
         {
-            return stack[stack.IndexOf(page) - 1];
-        }
-
-        private void Stack_CollectionChanged(object sender, NotifyCollectionChangedEventArgs notifyCollectionChangedEventArgs)
-        {
-            switch (notifyCollectionChangedEventArgs.Action)
+            var masterViewModelWithView = stack.Last(p => p.Key is MasterViewModel);
+            if (masterViewModelWithView.Key == null)
             {
-                case NotifyCollectionChangedAction.Add:
-                    {
-                        foreach (var newPage in notifyCollectionChangedEventArgs.NewItems.OfType<Page>())
-                            SubscribeToPageIfNeeded(newPage);
-                    }
-                    break;
+                traceService.Trace("Can't get MasterInfo if no one MasterViewModel exists.");
+                return null;
+            }
 
-                case NotifyCollectionChangedAction.Remove:
-                    {
-                        foreach (var oldPage in notifyCollectionChangedEventArgs.OldItems.OfType<Page>())
-                            UnSubscribeFromPageIfNeeded(oldPage);
-                    }
-                    break;
+            var detailViewModelWithView = stack.Last(p => p.Key is DetailViewModel);
+            if (detailViewModelWithView.Key == null)
+            {
+                traceService.Trace("Can't get MasterInfo if no one DetailViewModel exists.");
+                return null;
+            }
+
+            var masterDetailPage = masterViewModelWithView.Value.Parent as MasterDetailPage;
+            if (masterDetailPage == null)
+            {
+                traceService.Trace("Can't MasterInfo if no one MasterDetailPage exists.");
+                return null;
+            }
+
+            return new MasterDetailPageInfo(masterDetailPage,
+                new KeyValuePair<IMasterViewModel, Page>(masterViewModelWithView.Key as IMasterViewModel, masterViewModelWithView.Value),
+                new KeyValuePair<IDetailViewModel, Page>(detailViewModelWithView.Key as IDetailViewModel, detailViewModelWithView.Value));
+        }
+
+        private void PushViewInStack(IViewModel model, Page page)
+        {
+            stack.Add(model, page);
+            SubscribeToPage(page);
+        }
+
+        private void PopViewFromStack(IViewModel model)
+        {
+            foreach (var pair in stack.SkipWhile(p => p.Key != model).Reverse().ToList())
+            {
+                stack.Remove(pair.Key);
+                UnSubscribeFrom(pair.Value);
             }
         }
 
-        private void SubscribeToPageIfNeeded(Page newPage)
+        private void SubscribeToPage(Page newPage)
         {
-            var viewModel = newPage.BindingContext as IViewModel;
-            if (viewModel != null)
-            {
-                newPage.Appearing += Page_Appearing;
-                newPage.Disappearing += Page_Disappearing;
-            }
+            newPage.Appearing += Page_Appearing;
+            newPage.Disappearing += Page_Disappearing;
         }
 
-        private void UnSubscribeFromPageIfNeeded(Page newPage)
+        private void UnSubscribeFrom(Page newPage)
         {
-            var viewModel = newPage.BindingContext as IViewModel;
-            if (viewModel != null)
-            {
-                newPage.Appearing -= Page_Appearing;
-                newPage.Disappearing -= Page_Disappearing;
-            }
+            newPage.Appearing -= Page_Appearing;
+            newPage.Disappearing -= Page_Disappearing;
         }
 
         private void Page_Appearing(object sender, EventArgs eventArgs)
@@ -261,6 +237,22 @@ namespace SimpleXamarinFormsMVVM.Core.View.Services
         {
             var viewModel = ((IViewModel)((Page)sender).BindingContext);
             viewModel.OnDisappearing();
+        }
+
+        private sealed class MasterDetailPageInfo
+        {
+            public MasterDetailPageInfo(MasterDetailPage masterDetailPage, KeyValuePair<IMasterViewModel, Page> masterViewModelWithView, KeyValuePair<IDetailViewModel, Page> detailViewModelWithView)
+            {
+                MasterDetailPage = masterDetailPage;
+                MasterViewModelWithView = masterViewModelWithView;
+                DetailViewModelWithView = detailViewModelWithView;
+            }
+
+            public MasterDetailPage MasterDetailPage { get; }
+
+            public KeyValuePair<IMasterViewModel, Page> MasterViewModelWithView { get; }
+
+            public KeyValuePair<IDetailViewModel, Page> DetailViewModelWithView { get; }
         }
     }
 }

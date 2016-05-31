@@ -10,6 +10,7 @@ namespace SimpleXamarinFormsMVVM.Core.View.Models
         /// </summary>
         IDetailViewModel DetailViewModel { get; set; }
 
-        ICommand PresentMaster { get; }
+        ICommand PresentMasterCommand { get; }
+        ICommand PresentDetailCommand { get; }
     }
 }

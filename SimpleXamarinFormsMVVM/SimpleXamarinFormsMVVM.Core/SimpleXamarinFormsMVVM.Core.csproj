@@ -35,6 +35,7 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="Collections\StackDisposable.cs" />
     <Compile Include="Extentions\EnumerableExtentions.cs" />
     <Compile Include="Extentions\PropertyNameExtentions.cs" />
     <Compile Include="Extentions\TypeInstanceExtetions.cs" />
@@ -43,6 +44,8 @@
     <Compile Include="MVVMApp.cs" />
     <Compile Include="MVVMSetup.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="View\Models\ViewModel.cs" />
+    <Compile Include="View\Models\BaseViewObject.cs" />
     <Compile Include="View\Models\DetailViewModel.cs" />
     <Compile Include="View\Models\IDetailViewModel.cs" />
     <Compile Include="View\Models\IMasterViewModel.cs" />
@@ -55,7 +58,6 @@
     <Compile Include="View\Services\ITraceService.cs" />
     <Compile Include="View\Services\NavigationService.cs" />
     <Compile Include="View\Services\PageLoaderService.cs" />
-    <Compile Include="View\Models\BaseViewModel.cs" />
     <Compile Include="View\ViewModelWithView.cs" />
   </ItemGroup>
   <ItemGroup>

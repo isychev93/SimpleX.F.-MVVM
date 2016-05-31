@@ -1,5 +1,5 @@
 ﻿using System;
-using System.Collections.ObjectModel;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using SimpleXamarinFormsMVVM.Core.View.Models;
 using Xamarin.Forms;
@@ -8,14 +8,12 @@ namespace SimpleXamarinFormsMVVM.Core.View.Services
 {
     public interface INavigationService
     {
+        NavigationPage Root { get; }
+
         /// <summary>
         /// Stack of pages.
-        /// Contain all types of pages, like <see cref="NavigationPage"/> and <see cref="MasterDetailPage"/>.
         /// </summary>
-        /// <remarks>
-        /// Exclusion: Not contains <see cref="MasterDetailPage.Master"/> in <see cref="MasterDetailPage"/>.
-        /// </remarks>
-        ReadOnlyObservableCollection<Page> Stack { get; }
+        Dictionary<IViewModel, Page> Stack { get; }
 
         /// <summary>
         /// Show page which mapped with <see cref="TViewModel"/>.
@@ -45,7 +43,7 @@ namespace SimpleXamarinFormsMVVM.Core.View.Services
             where TMasterViewModel : IMasterViewModel
             where TDetailViewModel : IDetailViewModel;
 
-        Task ChangeDetailView<TViewModel>(Action<TViewModel> viewModelAdditionalAction = null) where TViewModel : IViewModel;
+        Task ChangeDetailView<TViewModel>(Action<TViewModel> viewModelAdditionalAction = null) where TViewModel : IDetailViewModel;
 
         /// <summary>
         /// Present master view (if contains in <see cref="Stack"/>).
@@ -60,6 +58,8 @@ namespace SimpleXamarinFormsMVVM.Core.View.Services
         void PresentDetailView();
 
         Task GoBack();
+
+        Task GoBack(IViewModel viewModelToDelete);
 
         /// <summary>
         /// Execute action for page which mapped with <see cref="viewModel"/>.

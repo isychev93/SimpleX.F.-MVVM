@@ -4,6 +4,7 @@ namespace SimpleXamarinFormsMVVM.Core.View.Models
 {
     public interface IDetailViewModel : IViewModel
     {
-        ICommand PresentDetail { get; }
+        ICommand PresentMasterCommand { get; }
+        ICommand PresentDetailCommand { get; }
     }
 }

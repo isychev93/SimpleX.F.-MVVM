@@ -4,13 +4,15 @@ using Xamarin.Forms;
 
 namespace SimpleXamarinFormsMVVM.Core.View.Models
 {
-    public abstract class DetailViewModel : BaseViewModel, IDetailViewModel
+    public abstract class DetailViewModel : ViewModel, IDetailViewModel
     {
-        public DetailViewModel(INavigationService navigationService) : base(navigationService)
+        protected DetailViewModel(INavigationService navigationService) : base(navigationService)
         {
-            PresentDetail = new Command(navigationService.PresentDetailView);
+            PresentMasterCommand = new Command(navigationService.PresentMasterView);
+            PresentDetailCommand = new Command(navigationService.PresentDetailView);
         }
 
-        public ICommand PresentDetail { get; }
+        public ICommand PresentMasterCommand { get; }
+        public ICommand PresentDetailCommand { get; }
     }
 }

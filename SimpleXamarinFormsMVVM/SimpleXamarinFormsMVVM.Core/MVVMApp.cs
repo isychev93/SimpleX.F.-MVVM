@@ -21,7 +21,7 @@ namespace SimpleXamarinFormsMVVM.Core
         protected Task ShowStartView<TViewModel>() where TViewModel : IViewModel
         {
             var navigationService = SimpleServiceLocator.Instance.Resolve<INavigationService>();
-            MainPage = navigationService.Stack[0];
+            MainPage = navigationService.Root;
             return navigationService.ShowView<TViewModel>();
         }
     }

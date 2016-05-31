@@ -37,5 +37,7 @@ namespace SimpleXamarinFormsMVVM.Core.View.Services
         /// <param name="viewModelType">View model type.</param>
         /// <param name="viewModelAdditionalAction">Additional action which executed after viewModel instance will be created (set route params for example).</param>
         KeyValuePair<IViewModel, Page> GetView(Type viewModelType, Action<IViewModel> viewModelAdditionalAction);
+
+        MasterDetailPage GetDefaultMasterPage<TMasterViewModel>() where TMasterViewModel : IMasterViewModel;
     }
 }

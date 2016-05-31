@@ -4,15 +4,20 @@ using Xamarin.Forms;
 
 namespace SimpleXamarinFormsMVVM.Core.View.Models
 {
-    public abstract class MasterViewModel : BaseViewModel, IMasterViewModel
+    public abstract class MasterViewModel : ViewModel, IMasterViewModel
     {
-        public MasterViewModel(INavigationService navigationService) : base(navigationService)
+        protected MasterViewModel(INavigationService navigationService) : base(navigationService)
         {
-            PresentMaster = new Command(navigationService.PresentMasterView);
+            PresentMasterCommand = new Command(navigationService.PresentMasterView);
+            PresentDetailCommand = new Command(navigationService.PresentDetailView);
+            GoBackCommand = new Command(() => navigationService.GoBack(this));
         }
 
         public IDetailViewModel DetailViewModel { get; set; }
 
-        public virtual ICommand PresentMaster { get; }
+        public virtual ICommand PresentMasterCommand { get; }
+        public virtual ICommand PresentDetailCommand { get; }
+
+        public override ICommand GoBackCommand { get; }
     }
 }
