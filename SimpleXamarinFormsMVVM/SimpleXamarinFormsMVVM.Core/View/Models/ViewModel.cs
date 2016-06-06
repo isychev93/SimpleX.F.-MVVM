@@ -34,6 +34,11 @@ namespace SimpleXamarinFormsMVVM.Core.View.Models
 
         }
 
+        public virtual void InitModel()
+        {
+
+        }
+
         public virtual ICommand GoBackCommand { get; }
     }
 }

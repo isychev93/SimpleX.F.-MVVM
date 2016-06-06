@@ -51,6 +51,7 @@ namespace SimpleXamarinFormsMVVM.Core.View.Services
         {
             var viewModel = (IViewModel)viewModelType.CreateInstance();
             viewModelAdditionalAction?.Invoke(viewModel);
+            viewModel.InitModel();
             return viewModel;
         }
 
