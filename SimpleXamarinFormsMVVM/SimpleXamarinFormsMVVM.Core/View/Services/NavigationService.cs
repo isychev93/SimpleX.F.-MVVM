@@ -162,9 +162,9 @@ namespace SimpleXamarinFormsMVVM.Core.View.Services
             return stack.Last().Value.Navigation.PopAsync();
         }
 
-        public void Execute(IViewModel viewModel, Action<Page> action)
+        public void Execute(Action<Page> action)
         {
-            action(stack[viewModel]);
+            action(stack.Last().Value);
         }
 
         private INavigation GetCurrentNavigation()
@@ -211,7 +211,7 @@ namespace SimpleXamarinFormsMVVM.Core.View.Services
             foreach (var pair in stack.SkipWhile(p => p.Key != model).Reverse().ToList())
             {
                 stack.Remove(pair.Key);
-                UnSubscribeFrom(pair.Value);
+                UnsubscribeFrom(pair.Value);
             }
         }
 
@@ -221,7 +221,7 @@ namespace SimpleXamarinFormsMVVM.Core.View.Services
             newPage.Disappearing += Page_Disappearing;
         }
 
-        private void UnSubscribeFrom(Page newPage)
+        private void UnsubscribeFrom(Page newPage)
         {
             newPage.Appearing -= Page_Appearing;
             newPage.Disappearing -= Page_Disappearing;

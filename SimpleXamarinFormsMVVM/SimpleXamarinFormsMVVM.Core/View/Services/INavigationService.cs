@@ -62,10 +62,9 @@ namespace SimpleXamarinFormsMVVM.Core.View.Services
         Task GoBack(IViewModel viewModelToDelete);
 
         /// <summary>
-        /// Execute action for page which mapped with <see cref="viewModel"/>.
+        /// Execute action for current page.
         /// </summary>
-        /// <param name="viewModel"></param>
         /// <param name="action"></param>
-        void Execute(IViewModel viewModel, Action<Page> action);
+        void Execute(Action<Page> action);
     }
 }
