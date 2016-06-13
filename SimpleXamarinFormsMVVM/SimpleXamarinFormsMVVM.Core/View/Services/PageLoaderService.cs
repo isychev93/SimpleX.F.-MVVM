@@ -11,17 +11,17 @@ namespace SimpleXamarinFormsMVVM.Core.View.Services
     {
         private readonly Dictionary<Type, Type> viewModelViewMap = new Dictionary<Type, Type>();
 
-        public void RegisterView<TViewModel, TView>() where TViewModel : IViewModel where TView : Page, IView<TViewModel>
+        public virtual void RegisterView<TViewModel, TView>() where TViewModel : IViewModel where TView : Page, IView<TViewModel>
         {
             viewModelViewMap.Add(typeof(TViewModel), typeof(TView));
         }
 
-        public KeyValuePair<TViewModel, Page> GetView<TViewModel>() where TViewModel : IViewModel
+        public virtual KeyValuePair<TViewModel, Page> GetView<TViewModel>() where TViewModel : IViewModel
         {
             return GetView<TViewModel>(null);
         }
 
-        public KeyValuePair<TViewModel, Page> GetView<TViewModel>(Action<TViewModel> viewModelAdditionalAction) where TViewModel : IViewModel
+        public virtual KeyValuePair<TViewModel, Page> GetView<TViewModel>(Action<TViewModel> viewModelAdditionalAction) where TViewModel : IViewModel
         {
 
             var viewModelWithView = GetView(typeof(TViewModel), viewModel =>
@@ -33,7 +33,7 @@ namespace SimpleXamarinFormsMVVM.Core.View.Services
             return new KeyValuePair<TViewModel, Page>((TViewModel)viewModelWithView.Key, viewModelWithView.Value);
         }
 
-        public KeyValuePair<IViewModel, Page> GetView(Type viewModelType, Action<IViewModel> viewModelAdditionalAction)
+        public virtual KeyValuePair<IViewModel, Page> GetView(Type viewModelType, Action<IViewModel> viewModelAdditionalAction)
         {
             Type viewType;
             if (!viewModelViewMap.TryGetValue(viewModelType, out viewType))
@@ -55,13 +55,14 @@ namespace SimpleXamarinFormsMVVM.Core.View.Services
             return viewModel;
         }
 
-        public MasterDetailPage GetDefaultMasterPage<TMasterViewModel>() where TMasterViewModel : IMasterViewModel
+        public virtual MasterDetailPage GetDefaultMasterPage()
         {
-            return new MasterDetailPage
-            {
-                MasterBehavior = MasterBehavior.Popover,
-                Title =  string.Empty
-            };
+            return new MasterDetailPage();
+        }
+
+        public virtual NavigationPage GetDefaultNavigationPage()
+        {
+            return new NavigationPage();
         }
     }
 }

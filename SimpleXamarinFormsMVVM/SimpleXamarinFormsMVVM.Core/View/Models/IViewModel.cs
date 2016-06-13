@@ -1,15 +1,15 @@
-﻿using System.Windows.Input;
+﻿using System;
+using System.Windows.Input;
 using Xamarin.Forms;
 
 namespace SimpleXamarinFormsMVVM.Core.View.Models
 {
-    public interface IViewModel
+    public interface IViewModel : IDisposable
     {
         /// <summary>
         /// Sign that a new page should be put in the new <see cref="NavigationPage"/>.
         /// </summary>
         bool ShowInNewNavigationPage { get; }
-        bool HasNavigationBar { get; }
 
         ICommand GoBackCommand { get; }
 

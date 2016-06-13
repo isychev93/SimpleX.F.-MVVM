@@ -19,11 +19,6 @@ namespace SimpleXamarinFormsMVVM.Core.View.Models
             get { return false; }
         }
 
-        public virtual bool HasNavigationBar
-        {
-            get { return true; }
-        }
-
         public virtual void OnAppearing()
         {
 

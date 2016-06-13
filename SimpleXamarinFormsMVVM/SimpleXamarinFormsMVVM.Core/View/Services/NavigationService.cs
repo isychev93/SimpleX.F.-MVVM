@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
-using System.Threading.Tasks;
 using SimpleXamarinFormsMVVM.Core.View.Models;
 using Xamarin.Forms;
 
@@ -13,12 +12,13 @@ namespace SimpleXamarinFormsMVVM.Core.View.Services
         private readonly IPageLoaderService pageLoaderService;
         private readonly ITraceService traceService;
         private readonly Dictionary<IViewModel, Page> stack = new Dictionary<IViewModel, Page>();
-        private readonly NavigationPage root = new NavigationPage();
 
         public NavigationService(IPageLoaderService pageLoaderService, ITraceService traceService)
         {
             this.pageLoaderService = pageLoaderService;
             this.traceService = traceService;
+
+            Root = pageLoaderService.GetDefaultNavigationPage();
         }
 
         public Dictionary<IViewModel, Page> Stack
@@ -26,65 +26,53 @@ namespace SimpleXamarinFormsMVVM.Core.View.Services
             get { return stack; }
         }
 
-        public NavigationPage Root
+        public NavigationPage Root { get; }
+
+        public void ShowView<TViewModel>() where TViewModel : IViewModel
         {
-            get { return root; }
+            ShowView<TViewModel>(null);
         }
 
-        public Task ShowView<TViewModel>() where TViewModel : IViewModel
-        {
-            return ShowView<TViewModel>(null);
-        }
-
-        public Task ShowView<TViewModel>(Action<TViewModel> viewModelAdditionalAction) where TViewModel : IViewModel
+        public void ShowView<TViewModel>(Action<TViewModel> viewModelAdditionalAction) where TViewModel : IViewModel
         {
             if (typeof(TViewModel).GetTypeInfo().IsAssignableFrom(typeof(IDetailViewModel).GetTypeInfo()))
             {
                 traceService.Trace("Can't show view {0}. View which implement IDetailViewModel must be present as detail of master view.", typeof(TViewModel));
-                return null;
+                return;
             }
 
             var viewModelWithView = pageLoaderService.GetView(viewModelAdditionalAction);
             var model = viewModelWithView.Key;
             var view = viewModelWithView.Value;
-            PushViewInStack(model, view);
-
-            view.SetValue(NavigationPage.HasNavigationBarProperty, model.HasNavigationBar);
-
             var currentNavigation = GetCurrentNavigation();
+
+            PushViewInStack(model, view);
 
             if (!model.ShowInNewNavigationPage)
             {
-                var addNewViewTask = currentNavigation.PushAsync(view);
-                return addNewViewTask;
+                currentNavigation.PushAsync(view);
+                return;
             }
 
-            var newNavPage = new NavigationPage();
-            var addNewNavPageTask = currentNavigation.PushAsync(newNavPage);
-            var addNewViewTaskIntoNewNavPage = newNavPage.PushAsync(view);
-            return Task.WhenAll(addNewNavPageTask, addNewViewTaskIntoNewNavPage);
+            var newNavPage = pageLoaderService.GetDefaultNavigationPage();
+            currentNavigation.PushAsync(newNavPage);
+            newNavPage.PushAsync(view);
         }
 
-        public Task ShowMasterView<TMasterViewModel, TDetailViewModel>(Action<TMasterViewModel> masterViewModelAdditionalAction = null, Action<TDetailViewModel> detailViewModelAdditionalAction = null)
+        public void ShowMasterView<TMasterViewModel, TDetailViewModel>(Action<TMasterViewModel> masterViewModelAdditionalAction = null, Action<TDetailViewModel> detailViewModelAdditionalAction = null)
             where TMasterViewModel : IMasterViewModel
             where TDetailViewModel : IDetailViewModel
         {
             var masterViewModelWithView = pageLoaderService.GetView(masterViewModelAdditionalAction);
             var masterViewModel = masterViewModelWithView.Key;
             var masterView = masterViewModelWithView.Value;
-            masterViewModelWithView.Value.SetValue(NavigationPage.HasNavigationBarProperty, masterViewModel.HasNavigationBar);
 
             var detailViewModelWithView = pageLoaderService.GetView(detailViewModelAdditionalAction);
             var detailViewModel = detailViewModelWithView.Key;
             var detailView = detailViewModelWithView.Value;
-            detailView.SetValue(NavigationPage.HasNavigationBarProperty, detailViewModel.HasNavigationBar);
             masterViewModel.DetailViewModel = detailViewModel;
 
-            PushViewInStack(masterViewModel, masterView);
-            PushViewInStack(detailViewModel, detailView);
-
-            var tasksToWait = new List<Task>();
-            var masterPage = pageLoaderService.GetDefaultMasterPage<TMasterViewModel>();
+            var masterPage = pageLoaderService.GetDefaultMasterPage();
             masterPage.Master = masterView;
 
             if (!detailViewModel.ShowInNewNavigationPage)
@@ -93,25 +81,28 @@ namespace SimpleXamarinFormsMVVM.Core.View.Services
             }
             else
             {
-                var newDetailNavPage = new NavigationPage();
-                tasksToWait.Add(newDetailNavPage.PushAsync(detailView));
+                var newDetailNavPage = pageLoaderService.GetDefaultNavigationPage();
+                newDetailNavPage.PushAsync(detailView);
+                masterPage.Detail = newDetailNavPage;
             }
 
             var currentNavigation = GetCurrentNavigation();
+
+            PushViewInStack(masterViewModel, masterView);
+            PushViewInStack(detailViewModel, detailView);
+
             if (!masterViewModel.ShowInNewNavigationPage)
             {
-                tasksToWait.Add(currentNavigation.PushAsync(masterPage));
+                currentNavigation.PushAsync(masterPage);
             }
             else
             {
-                var newMasterNavPage = new NavigationPage();
-                tasksToWait.Add(newMasterNavPage.PushAsync(masterPage));
+                var newMasterNavPage = pageLoaderService.GetDefaultNavigationPage();
+                newMasterNavPage.PushAsync(masterPage);
             }
-
-            return Task.WhenAll(tasksToWait);
         }
 
-        public Task ChangeDetailView<TViewModel>(Action<TViewModel> viewModelAdditionalAction = null) where TViewModel : IDetailViewModel
+        public void ChangeDetailView<TViewModel>(Action<TViewModel> viewModelAdditionalAction = null) where TViewModel : IDetailViewModel
         {
             var viewModelWithView = pageLoaderService.GetView(viewModelAdditionalAction);
             var model = viewModelWithView.Key;
@@ -121,7 +112,7 @@ namespace SimpleXamarinFormsMVVM.Core.View.Services
             if (masterInfo == null)
             {
                 traceService.Trace("Can't show {0} as detail view, masterInfo is null", typeof(TViewModel));
-                return null;
+                return;
             }
             PopViewFromStack(masterInfo.DetailViewModelWithView.Key);
             PushViewInStack(model, view);
@@ -129,13 +120,12 @@ namespace SimpleXamarinFormsMVVM.Core.View.Services
             if (!model.ShowInNewNavigationPage)
             {
                 masterInfo.MasterDetailPage.Detail = view;
-                return null;
+                return;
             }
 
-            var newNavPage = new NavigationPage();
-            var addNewViewTaskIntoNewNavPage = newNavPage.PushAsync(view);
+            var newNavPage = pageLoaderService.GetDefaultNavigationPage();
+            newNavPage.PushAsync(view);
             masterInfo.MasterDetailPage.Detail = newNavPage;
-            return addNewViewTaskIntoNewNavPage;
         }
 
         public void PresentMasterView()
@@ -152,14 +142,16 @@ namespace SimpleXamarinFormsMVVM.Core.View.Services
                 masterInfo.MasterDetailPage.IsPresented = false;
         }
 
-        public Task GoBack(IViewModel viewModelToDelete)
+        public void GoBack()
         {
-            return stack[viewModelToDelete].Navigation.PopAsync();
+            var currentPage = stack.Last();
+            GoBack(currentPage.Key);
         }
 
-        public Task GoBack()
+        public void GoBack(IViewModel viewModelToDelete)
         {
-            return stack.Last().Value.Navigation.PopAsync();
+            stack[viewModelToDelete].Navigation.PopAsync();
+            PopViewFromStack(viewModelToDelete);
         }
 
         public void Execute(Action<Page> action)
@@ -169,7 +161,7 @@ namespace SimpleXamarinFormsMVVM.Core.View.Services
 
         private INavigation GetCurrentNavigation()
         {
-            return Stack.Any() ? Stack.Last().Value.Navigation : root.Navigation;
+            return Stack.Any() ? Stack.Last().Value.Navigation : Root.Navigation;
         }
 
         private MasterDetailPageInfo GetCurrentMasterInfo()
@@ -212,6 +204,7 @@ namespace SimpleXamarinFormsMVVM.Core.View.Services
             {
                 stack.Remove(pair.Key);
                 UnsubscribeFrom(pair.Value);
+                model.Dispose();
             }
         }
 

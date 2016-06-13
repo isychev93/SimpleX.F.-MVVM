@@ -7,7 +7,7 @@ using SimpleXamarinFormsMVVM.Core.Extentions;
 
 namespace SimpleXamarinFormsMVVM.Core.View.Models
 {
-    public abstract class BaseViewObject : IDisposable
+    public abstract class BaseViewObject : IDisposable, INotifyPropertyChanged
     {
         private readonly StackDisposable disposables = new StackDisposable();
 
