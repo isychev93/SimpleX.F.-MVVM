@@ -37,7 +37,7 @@ namespace SimpleXamarinFormsMVVM.Core.View.Services
         {
             if (typeof(TViewModel).GetTypeInfo().IsAssignableFrom(typeof(IDetailViewModel).GetTypeInfo()))
             {
-                traceService.Trace("Can't show view {0}. View which implement IDetailViewModel must be present as detail of master view.", typeof(TViewModel));
+                traceService.Error("Can't show view {0}. View which implement IDetailViewModel must be present as detail of master view.", typeof(TViewModel));
                 return;
             }
 
@@ -111,7 +111,7 @@ namespace SimpleXamarinFormsMVVM.Core.View.Services
             var masterInfo = GetCurrentMasterInfo();
             if (masterInfo == null)
             {
-                traceService.Trace("Can't show {0} as detail view, masterInfo is null", typeof(TViewModel));
+                traceService.Error("Can't show {0} as detail view, masterInfo is null", typeof(TViewModel));
                 return;
             }
             PopViewFromStack(masterInfo.DetailViewModelWithView.Key);
@@ -169,21 +169,21 @@ namespace SimpleXamarinFormsMVVM.Core.View.Services
             var masterViewModelWithView = stack.Last(p => p.Key is MasterViewModel);
             if (masterViewModelWithView.Key == null)
             {
-                traceService.Trace("Can't get MasterInfo if no one MasterViewModel exists.");
+                traceService.Error("Can't get MasterInfo if no one MasterViewModel exists.");
                 return null;
             }
 
             var detailViewModelWithView = stack.Last(p => p.Key is DetailViewModel);
             if (detailViewModelWithView.Key == null)
             {
-                traceService.Trace("Can't get MasterInfo if no one DetailViewModel exists.");
+                traceService.Error("Can't get MasterInfo if no one DetailViewModel exists.");
                 return null;
             }
 
             var masterDetailPage = masterViewModelWithView.Value.Parent as MasterDetailPage;
             if (masterDetailPage == null)
             {
-                traceService.Trace("Can't MasterInfo if no one MasterDetailPage exists.");
+                traceService.Error("Can't MasterInfo if no one MasterDetailPage exists.");
                 return null;
             }
 
