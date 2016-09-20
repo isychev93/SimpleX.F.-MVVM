@@ -13,6 +13,20 @@ namespace SimpleXamarinFormsMVVM.Core.View.Models
 
         ICommand GoBackCommand { get; }
 
+        /// <summary>
+        /// Validate model before exit and call <see cref="SaveResult"/>.
+        /// If function return false, exit will be canceled.
+        /// </summary>
+        /// <returns>
+        /// true - model is valid, else false.
+        /// </returns>
+        bool ValidateBeforeExit();
+
+        /// <summary>
+        /// Save model result. Call only if <see cref="ValidateBeforeExit"/> return true.
+        /// </summary>
+        void SaveResult();
+
         void OnAppearing();
         void OnDisappearing();
 

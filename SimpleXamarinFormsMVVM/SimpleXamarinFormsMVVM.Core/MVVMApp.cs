@@ -1,6 +1,4 @@
-﻿using System.Threading.Tasks;
-using SimpleXamarinFormsMVVM.Core.IOC;
-using SimpleXamarinFormsMVVM.Core.View;
+﻿using SimpleXamarinFormsMVVM.Core.IOC;
 using SimpleXamarinFormsMVVM.Core.View.Models;
 using SimpleXamarinFormsMVVM.Core.View.Services;
 using Xamarin.Forms;

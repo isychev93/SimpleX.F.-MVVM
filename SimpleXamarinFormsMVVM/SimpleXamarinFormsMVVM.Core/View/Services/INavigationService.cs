@@ -53,8 +53,15 @@ namespace SimpleXamarinFormsMVVM.Core.View.Services
         /// </summary>
         void PresentDetailView();
 
+        /// <summary>
+        /// Go to previous page in Stack.
+        /// </summary>
         void GoBack();
 
+        /// <summary>
+        /// Remove <see cref="viewModelToDelete"/> from stack (and all view models after this element in stack).
+        /// </summary>
+        /// <param name="viewModelToDelete"></param>
         void GoBack(IViewModel viewModelToDelete);
 
         /// <summary>

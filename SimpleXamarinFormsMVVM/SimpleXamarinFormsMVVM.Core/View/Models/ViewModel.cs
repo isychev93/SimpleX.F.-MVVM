@@ -11,7 +11,7 @@ namespace SimpleXamarinFormsMVVM.Core.View.Models
         protected ViewModel(INavigationService navigationService)
         {
             this.navigationService = navigationService;
-            GoBackCommand = new Command(() => navigationService.GoBack());
+            GoBackCommand = new Command(() => navigationService.GoBack(this));
         }
 
         public virtual bool ShowInNewNavigationPage
@@ -19,19 +19,25 @@ namespace SimpleXamarinFormsMVVM.Core.View.Models
             get { return false; }
         }
 
+        public virtual bool ValidateBeforeExit()
+        {
+            return true;
+        }
+
+        public virtual void SaveResult()
+        {
+        }
+
         public virtual void OnAppearing()
         {
-
         }
 
         public virtual void OnDisappearing()
         {
-
         }
 
         public virtual void InitModel()
         {
-
         }
 
         public virtual ICommand GoBackCommand { get; }

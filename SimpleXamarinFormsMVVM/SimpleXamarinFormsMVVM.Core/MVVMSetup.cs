@@ -5,7 +5,7 @@ namespace SimpleXamarinFormsMVVM.Core
 {
     public abstract class MVVMSetup
     {
-        public virtual void Initialize()
+        public void Initialize()
         {
             RegisterServices();
             RegisterViews(SimpleServiceLocator.Instance.Resolve<IPageLoaderService>());

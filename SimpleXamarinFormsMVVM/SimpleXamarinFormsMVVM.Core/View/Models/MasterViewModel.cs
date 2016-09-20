@@ -13,8 +13,6 @@ namespace SimpleXamarinFormsMVVM.Core.View.Models
             GoBackCommand = new Command(() => navigationService.GoBack(this));
         }
 
-        public IDetailViewModel DetailViewModel { get; set; }
-
         public virtual ICommand PresentMasterCommand { get; }
         public virtual ICommand PresentDetailCommand { get; }
 
