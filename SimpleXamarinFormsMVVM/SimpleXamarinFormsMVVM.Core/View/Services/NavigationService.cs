@@ -124,16 +124,28 @@ namespace SimpleXamarinFormsMVVM.Core.View.Services
             var masterInfo = GetCurrentMasterInfo();
             if (masterInfo == null)
             {
-                traceService.Error("Can't show {0} as detail view, masterInfo is null", typeof(TViewModel));
+                throw new InvalidOperationException(string.Format("Can't show {0} as detail view, masterInfo is null", typeof(TViewModel)));
+            }
+            var currentViewModel = stack.Last().Key;
+            var currentViewDetailView = currentViewModel is IDetailViewModel;
+
+            if (!currentViewModel.ValidateBeforeExit())
+            {
+                if (currentViewDetailView)
+                    PresentDetailView();
                 return;
             }
 
-            if (!masterInfo.DetailViewModelWithView.Key.ValidateBeforeExit())
+            currentViewModel.SaveResult();
+
+            if (!currentViewDetailView)
             {
-                PresentDetailView();
-                return;
+                foreach (var pair in stack.Reverse().TakeWhile(m => (!(m.Key is IDetailViewModel))).Reverse())
+                {
+                    PopViewFromStack(pair.Key);
+                    masterInfo.MasterDetailPage.Navigation.RemovePage(pair.Value);
+                }
             }
-            masterInfo.DetailViewModelWithView.Key.SaveResult();
 
             var viewModelWithView = pageLoaderService.GetView(viewModelAdditionalAction);
             var model = viewModelWithView.Key;
