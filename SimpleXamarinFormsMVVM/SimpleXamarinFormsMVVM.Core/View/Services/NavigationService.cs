@@ -143,7 +143,7 @@ namespace SimpleXamarinFormsMVVM.Core.View.Services
                 foreach (var pair in stack.Reverse().TakeWhile(m => (!(m.Key is IDetailViewModel))).Reverse())
                 {
                     PopViewFromStack(pair.Key);
-                    masterInfo.MasterDetailPage.Navigation.RemovePage(pair.Value);
+                    GetCurrentNavigation().RemovePage(pair.Value);
                 }
             }
 
