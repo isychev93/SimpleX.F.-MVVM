@@ -1,4 +1,5 @@
 ﻿using SimpleXamarinFormsMVVM.Core.IOC;
+using SimpleXamarinFormsMVVM.Core.View.Models;
 using SimpleXamarinFormsMVVM.Core.View.Services;
 
 namespace SimpleXamarinFormsMVVM.Core
